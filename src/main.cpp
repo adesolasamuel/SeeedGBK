@@ -1,14 +1,14 @@
-#include "custom.h"
+#include "seeedGBK_LED.h"
 
-int redled = 13;
-
-LED myLED;
+seeedGBK::LED redled(13);
+seeedGBK::LED blueled(14);
 
 void setup() {
-  pinMode(redled, OUTPUT);
 
 }
 
 void loop() {
-  myLED.Blink(redled, 0.5);
+  redled.Blink(2);
+  blueled.Blink(0.5);
+  blueled.PWM(100);
 }
