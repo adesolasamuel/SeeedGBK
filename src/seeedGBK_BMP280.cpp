@@ -1,8 +1,11 @@
 #include "seeedGBK_BMP280.h"
+#include <ArduinoJson.h>
 
 // #define BMP280_DEBUG_PRINT
 
 namespace seeedGBK{
+
+uint32_t BMP280::MSL  = 102009; // Mean Sea Level in Pa
 
 bool BMP280::init(int i2c_addr) {
   uint8_t chip_id = 0;
@@ -51,6 +54,10 @@ float BMP280::getTemperature(void) {
   return T / 100;
 }
 
+float BMP280::getMSL(void) {
+  return BMP280::MSL / 100.0;
+}
+
 uint32_t BMP280::getPressure(void) {
   int64_t var1, var2, p;
   // Call getTemperature to get t_fine
@@ -75,24 +82,39 @@ uint32_t BMP280::getPressure(void) {
   var1 = (((int64_t)dig_P9) * (p >> 13) * (p >> 13)) >> 25;
   var2 = (((int64_t)dig_P8) * p) >> 19;
   p = ((p + var1 + var2) >> 8) + (((int64_t)dig_P7) << 4);
-  return (uint32_t)p / 256;
+  return ((uint32_t)p / 256) / 100.0;
 }
 
-float BMP280::calcAltitude(float p0, float p1, float t) {
+float BMP280::calcAltitude() {
   float C;
-  C = (p0 / p1);
+  C = (BMP280::MSL / (BMP280::getPressure()*100.0));
   C = pow(C, (1 / 5.25588)) - 1.0;
-  C = (C * (t + 273.15)) / 0.0065;
+  C = (C * (BMP280::getTemperature() + 273.15)) / 0.0065;
   return C;
 }
 
-float BMP280::calcAltitude(float p0) {
-  if (!isTransport_OK) {
-    return 0;
+void BMP280::setMSL() {
+  if (Serial.available()) {
+    char mb[255];
+    uint8_t ix = 0;
+    while (Serial.available()) {
+      mb[ix++] = Serial.read();
+    }
+    mb[ix] = 0;
+    Serial.println("Incoming:");
+    Serial.println(mb);
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, mb);
+    if (!error) {
+      float newMSL = doc["MSL"];
+      Serial.print("New MSL: "); Serial.println(newMSL);
+      if (newMSL > 0.0) {
+        MSL = newMSL * 100;
+      }
+    } else {
+      Serial.println("Parse error!");
+    }
   }
-  float t = getTemperature();
-  float p1 = getPressure();
-  return calcAltitude(p0, p1, t);
 }
 
 uint8_t BMP280::bmp280Read8(uint8_t reg) {

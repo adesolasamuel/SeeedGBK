@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+
 #include <Wire.h>
 
 #define BMP280_ADDRESS   0x77
@@ -34,10 +35,13 @@ class BMP280 {
   public:
     bool init(int i2c_addr = BMP280_ADDRESS);
     float getTemperature(void);
+    float getMSL(void);
     uint32_t getPressure(void);
     float calcAltitude(float p0);
-    float calcAltitude(float p0, float p1, float t);
+    float calcAltitude();
+    void setMSL();
   private:
+    static uint32_t MSL;
     bool isTransport_OK;
     int _devAddr;
     // Calibratino data
